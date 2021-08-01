@@ -219,10 +219,9 @@ class Model(nn.Module):
         content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
         style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_features=False)
 
-        for idx, images in enumerate(zip(content_image_path, style_image_path)):
-            #calculate kmeans clusters in style image and content image
-            content_label = calc_k(images[0], self.kmeans_device)
-            style_label = calc_k(images[1], self.kmeans_device)
+        for cp, sp, cf, sf in zip(content_image_path, style_image_path, content_features, style_features):
+            content_label = calc_k(cp, self.kmeans_device)
+            style_label = calc_k(sp, self.kmeans_device)
 
             content_k = int(content_label.max().item() + 1)
             style_k = int(style_label.max().item() + 1)
@@ -232,17 +231,17 @@ class Model(nn.Module):
             content_label = content_label.to(self.device)
             style_label = style_label.to(self.device)
 
-            cs_feature = torch.zeros_like(content_features[idx][-1])
+            cs_feature = torch.zeros_like(cf)
             for i, j in match.items():
-                cl = (content_label == i).unsqueeze(dim=0).expand_as(content_features[idx][-1]).to(torch.float)
-                sl = torch.zeros_like(style_features[idx][-1])
+                cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
+                sl = torch.zeros_like(sf)
                 for jj in j:
-                    sl += (style_label == jj).unsqueeze(dim=0).expand_as(style_features[idx][-1]).to(torch.float)
+                    sl += (style_label == jj).unsqueeze(dim=0).expand_as(sf).to(torch.float)
                 sl = sl.to(torch.bool)
-                sub_sf = style_features[idx][-1][sl].reshape(style_features[idx][-1].shape[0], -1)
-                cs_feature += labeled_whiten_and_color(content_features[idx][-1], sub_sf, alpha, cl)
-            cs.append(cs_feature)
+                sub_sf = sf[sl].reshape(sf.shape[0], -1)
+                cs_feature += labeled_whiten_and_color(cf, sub_sf, alpha, cl)
 
+            cs.append(cs_feature.unsqueeze(dim=0))
         cs = torch.cat(cs, dim=0)
         out = self.decoder(cs,content_features,style_features)
         return out
@@ -258,9 +257,9 @@ class Model(nn.Module):
         content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
         style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_feature=False)
 
-        for idx, images in enumerate(zip(content_image_path, style_image_path)):
-            content_label = calc_k(images[0], self.kmeans_device)
-            style_label = calc_k(images[1], self.kmeans_device)
+        for cp, sp, cf, sf in zip(content_image_path, style_image_path, content_features, style_features):
+            content_label = calc_k(cp, self.kmeans_device)
+            style_label = calc_k(sp, self.kmeans_device)
             content_k = int(content_label.max().item() + 1)
             style_k = int(style_label.max().item() + 1)
 
@@ -268,16 +267,17 @@ class Model(nn.Module):
             content_label = content_label.to(self.device)
             style_label = style_label.to(self.device)
 
-            cs_feature = torch.zeros_like(content_features[idx][-1])
+            cs_feature = torch.zeros_like(cf)
             for i, j in match.items():
-                cl = (content_label == i).unsqueeze(dim=0).expand_as(content_features[idx][-1]).to(torch.float)
-                sl = torch.zeros_like(style_features[idx][-1])
+                cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
+                sl = torch.zeros_like(sf)
                 for jj in j:
-                    sl += (style_label == jj).unsqueeze(dim=0).expand_as(style_features[idx][-1]).to(torch.float)
+                    sl += (style_label == jj).unsqueeze(dim=0).expand_as(sf).to(torch.float)
                 sl = sl.to(torch.bool)
-                sub_sf = style_features[idx][-1][sl].reshape(style_features[idx][-1].shape[0], -1)
-                cs_feature += labeled_whiten_and_color(content_features[idx][-1], sub_sf, alpha, cl)
-            cs.append(cs_feature)
+                sub_sf = sf[sl].reshape(sf.shape[0], -1)
+                cs_feature += labeled_whiten_and_color(cf, sub_sf, self.alpha, cl)
+
+            cs.append(cs_feature.unsqueeze(dim=0))
 
         cs = torch.cat(cs, dim=0)
         out = self.decoder(cs, content_features, style_features)
