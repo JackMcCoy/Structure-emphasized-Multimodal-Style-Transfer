@@ -263,7 +263,7 @@ class Model(nn.Module):
         content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
         style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_feature=False)
 
-        for cp, sp, cf, sf in zip(content_image_path, style_image_path, [i[-1] for i in content_features], [i[-1] for i in style_features]):
+        for idx, cp, sp, in zip(content_image_path, style_image_path):
             content_label = calc_k(cp, self.kmeans_device)
             style_label = calc_k(sp, self.kmeans_device)
             content_k = int(content_label.max().item() + 1)
@@ -273,20 +273,24 @@ class Model(nn.Module):
             content_label = content_label.to(self.device)
             style_label = style_label.to(self.device)
 
-            cs_feature = torch.zeros_like(cf)
-            for i, j in match.items():
-                cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
-                sl = torch.zeros_like(sf)
-                for jj in j:
-                    sl += (style_label == jj).unsqueeze(dim=0).expand_as(sf).to(torch.float)
-                sl = sl.to(torch.bool)
-                sub_sf = sf[sl].reshape(sf.shape[0], -1)
-                cs_feature += labeled_whiten_and_color(cf, sub_sf, self.alpha, cl)
+            intermediate_layers = []
+            for index, cf in enumerate(content_features[idx][1:]):
+                cs_feature = torch.zeros_like(cf)
+                for i, j in match.items():
+                    cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
+                    sl = torch.zeros_like(sf)
+                    for jj in j:
+                        sl += (style_label == jj).unsqueeze(dim=0).expand_as(style_features[idx][index]).to(torch.float)
+                    sl = sl.to(torch.bool)
+                    sub_sf = style_features[idx][index][sl].reshape(style_features[idx][index].shape[0], -1)
+                    cs_feature += labeled_whiten_and_color(cf, sub_sf, alpha, cl)
 
-            cs.append(cs_feature.unsqueeze(dim=0))
-
-        cs = torch.cat(cs, dim=0)
-        out = self.decoder(content_features,style_features,cs)
+                intermediate_layers.append(cs_feature.unsqueeze(dim=0))
+            cs.append(intermediate_layers)
+            concatenated = []
+            for i in range(len(cs[0])):
+                concatenated.append(torch.cat([j[i] for j in cs], dim=0))
+        out = self.decoder(concatenated)
 
         out_features = self.vgg_encoder(out, output_last_feature=True)
         out_middle_features = self.vgg_encoder(out, output_last_feature=False)
