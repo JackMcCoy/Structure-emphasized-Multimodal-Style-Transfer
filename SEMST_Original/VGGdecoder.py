@@ -148,10 +148,10 @@ class Decoder(nn.Module):
         t = self.decoder_1(cs)
         t = m(t)
         # t_2 = UPSCALE CONTENT FEAT!
-        t += adain(content_feat[1], style_feats[1])
+        t += adain(content_feat[-2], style_feats[-2])
         t = self.decoder_2(t)
         t = m(t)
-        t += adain(content_feat[2], style_feats[2])
+        t += adain(content_feat[-3], style_feats[-3])
         t = self.decoder_3(t)
         t = self.decoder_4(t)
         return t
