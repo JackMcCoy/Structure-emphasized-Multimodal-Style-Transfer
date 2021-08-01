@@ -287,6 +287,7 @@ def calc_k(image_path,
 def labeled_whiten_and_color(f_c, f_s, alpha, clabel):
     try:
         cc, ch, cw = f_c.shape
+        #take features and mask out other clusters
         cf = (f_c * clabel).reshape(cc, -1)
 
         num_nonzero = torch.sum(clabel).item() / cc

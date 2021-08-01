@@ -14,6 +14,19 @@ def calc_mean_std(features):
     features_std = features.reshape(batch_size, c, -1).std(dim=2).reshape(batch_size, c, 1, 1)
     return features_mean, features_std
 
+def calc_mean_std_adain(feat, eps=1e-5):
+    # eps is a small value added to the variance to avoid divide-by-zero.
+    size = feat.size()
+    #assert (len(size) == 4)
+    N, C = size[:2]
+    feat_var = feat.view(N, C, -1)
+    feat_var = feat_var.var(dim=2) + eps
+    feat_std = feat_var.sqrt()
+    feat_std = feat_std.view(N, C, 1, 1)
+    feat_mean = feat.view(N, C, -1)
+    feat_mean = feat_mean.mean(dim=2)
+    feat_mean = feat_mean.reshape((N, C, 1, 1))
+    return feat_mean, feat_std
 
 def calc_content_loss(out_features, content_features):
     return F.mse_loss(out_features, content_features)
@@ -27,6 +40,63 @@ def calc_style_loss(out_middle_features, style_middle_features):
         loss += F.mse_loss(c_mean, s_mean) + F.mse_loss(c_std, s_std)
     return loss
 
+def calc_emd_loss(pred, target):
+    """calculate emd loss.
+
+    Args:
+        pred (Tensor): of shape (N, C, H, W). Predicted tensor.
+        target (Tensor): of shape (N, C, H, W). Ground truth tensor.
+    """
+    b, _, h, w = pred.size()
+    pred = pred.view([b, -1, w * h])
+    pred_norm = torch.sqrt((pred**2).sum(1).view([b, -1, 1]))
+    pred = torch.transpose(pred, 2, 1)
+    target_t = target.view([b, -1, w * h])
+    target_norm = torch.sqrt((target**2).sum(1).view([b, 1, -1]))
+    similarity = torch.bmm(pred, target_t) / pred_norm / target_norm
+    dist = 1. - similarity
+    return dist
+
+def style_emd_loss(pred, target):
+    """Forward Function.
+
+    Args:
+        pred (Tensor): of shape (N, C, H, W). Predicted tensor.
+        target (Tensor): of shape (N, C, H, W). Ground truth tensor.
+    """
+    CX_M = calc_emd_loss(pred, target)
+    m1,_ = CX_M.min(2)
+    m2,_ = CX_M.min(1)
+    m = torch.cat([m1.mean(), m2.mean()])
+    loss_remd,_ = torch.max(m)
+    return loss_remd
+
+def content_relt_loss(pred, target):
+    """Forward Function.
+
+    Args:
+        pred (Tensor): of shape (N, C, H, W). Predicted tensor.
+        target (Tensor): of shape (N, C, H, W). Ground truth tensor.
+    """
+    dM = 1.
+    Mx = calc_emd_loss(pred, pred)
+    Mx = Mx / Mx.sum(1, keepdim=True)
+    My = calc_emd_loss(target, target)
+    My = My / My.sum(1, keepdim=True)
+    loss_content = torch.abs(
+        dM * (Mx - My)).mean() * pred.size()[2] * pred.size()[3]
+    return loss_content
+
+def adain(content_feat, style_feat):
+    assert (content_feat.size()[:2] == style_feat.size()[:2])
+    size = content_feat.size()
+    style_mean, style_std = calc_mean_std_adain(style_feat)
+    content_mean, content_std = calc_mean_std_adain(content_feat)
+
+    normalized_feat = (content_feat - content_mean.expand(
+        size)) / content_std.expand(size)
+    t = normalized_feat * style_std.expand(size) + style_mean.expand(size)
+    return t
 
 class VGGEncoder(nn.Module):
     def __init__(self, pretrained_path=None):
@@ -48,7 +118,7 @@ class VGGEncoder(nn.Module):
         if output_last_feature:
             return h4
         else:
-            return h1, h2, h3, h4
+            return [h1, h2, h3, h4]
 
 
 class Model(nn.Module):
@@ -87,6 +157,56 @@ class Model(nn.Module):
             loss += F.mse_loss(c_mean, s_mean) + F.mse_loss(c_std, s_std)
         return loss
 
+    @staticmethod
+    def calc_emd_loss(pred, target):
+        """calculate emd loss.
+
+        Args:
+            pred (Tensor): of shape (N, C, H, W). Predicted tensor.
+            target (Tensor): of shape (N, C, H, W). Ground truth tensor.
+        """
+        b, _, h, w = pred.size()
+        pred = pred.view([b, -1, w * h])
+        pred_norm = torch.sqrt((pred ** 2).sum(1).view([b, -1, 1]))
+        pred = torch.transpose(pred, 2, 1)
+        target_t = target.view([b, -1, w * h])
+        target_norm = torch.sqrt((target ** 2).sum(1).view([b, 1, -1]))
+        similarity = torch.bmm(pred, target_t) / pred_norm / target_norm
+        dist = 1. - similarity
+        return dist
+
+    @staticmethod
+    def style_emd_loss(pred, target):
+        """Forward Function.
+
+        Args:
+            pred (Tensor): of shape (N, C, H, W). Predicted tensor.
+            target (Tensor): of shape (N, C, H, W). Ground truth tensor.
+        """
+        CX_M = calc_emd_loss(pred, target)
+        m1, _ = CX_M.min(2)
+        m2, _ = CX_M.min(1)
+        m = torch.cat([m1.mean(), m2.mean()])
+        loss_remd, _ = torch.max(m)
+        return loss_remd
+
+    @staticmethod
+    def content_relt_loss(pred, target):
+        """Forward Function.
+
+        Args:
+            pred (Tensor): of shape (N, C, H, W). Predicted tensor.
+            target (Tensor): of shape (N, C, H, W). Ground truth tensor.
+        """
+        dM = 1.
+        Mx = calc_emd_loss(pred, pred)
+        Mx = Mx / Mx.sum(1, keepdim=True)
+        My = calc_emd_loss(target, target)
+        My = My / My.sum(1, keepdim=True)
+        loss_content = torch.abs(
+            dM * (Mx - My)).mean() * pred.size()[2] * pred.size()[3]
+        return loss_content
+
     def generate(self,
                  content_image_path,
                  style_image_path,
@@ -96,10 +216,11 @@ class Model(nn.Module):
         alpha = self.alpha if alpha is None else alpha
 
         cs = []
-        content_features = self.vgg_encoder(content_image_tensor.to(self.device))
-        style_features = self.vgg_encoder(style_image_tensor.to(self.device))
+        content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
+        style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_features=False)
 
-        for cp, sp, cf, sf in zip(content_image_path, style_image_path, content_features, style_features):
+        for idx, cp, sp in enumerate(zip(content_image_path, style_image_path)):
+            #calculate kmeans clusters in style image and content image
             content_label = calc_k(cp, self.kmeans_device)
             style_label = calc_k(sp, self.kmeans_device)
 
@@ -111,19 +232,24 @@ class Model(nn.Module):
             content_label = content_label.to(self.device)
             style_label = style_label.to(self.device)
 
-            cs_feature = torch.zeros_like(cf)
-            for i, j in match.items():
-                cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
-                sl = torch.zeros_like(sf)
-                for jj in j:
-                    sl += (style_label == jj).unsqueeze(dim=0).expand_as(sf).to(torch.float)
-                sl = sl.to(torch.bool)
-                sub_sf = sf[sl].reshape(sf.shape[0], -1)
-                cs_feature += labeled_whiten_and_color(cf, sub_sf, alpha, cl)
+            intermediate_layers=[]
+            for index, cf in enumerate(content_features[idx][1:]):
+                cs_feature = torch.zeros_like(cf)
+                for i, j in match.items():
+                    cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
+                    sl = torch.zeros_like(sf)
+                    for jj in j:
+                        sl += (style_label == jj).unsqueeze(dim=0).expand_as(style_features[idx][index]).to(torch.float)
+                    sl = sl.to(torch.bool)
+                    sub_sf = style_features[idx][index][sl].reshape(style_features[idx][index].shape[0], -1)
+                    cs_feature += labeled_whiten_and_color(cf, sub_sf, alpha, cl)
 
-            cs.append(cs_feature.unsqueeze(dim=0))
-        cs = torch.cat(cs, dim=0)
-        out = self.decoder(cs)
+                intermediate_layers.append(cs_feature.unsqueeze(dim=0))
+            cs.append(intermediate_layers)
+        concatenated=[]
+        for i in range(len(cs[0])):
+            concatenated.append(torch.cat([j[i] for j in cs], dim=0))
+        out = self.decoder(concatenated)
         return out
 
     def forward(self,
@@ -134,10 +260,10 @@ class Model(nn.Module):
                 gamma=1):
 
         cs = []
-        content_features = self.vgg_encoder(content_image_tensor.to(self.device))
-        style_features = self.vgg_encoder(style_image_tensor.to(self.device))
+        content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
+        style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_feature=False)
 
-        for cp, sp, cf, sf in zip(content_image_path, style_image_path, content_features, style_features):
+        for cp, sp, cf, sf in zip(content_image_path, style_image_path, [i[-1] for i in content_features], [i[-1] for i in style_features]):
             content_label = calc_k(cp, self.kmeans_device)
             style_label = calc_k(sp, self.kmeans_device)
             content_k = int(content_label.max().item() + 1)
@@ -160,7 +286,7 @@ class Model(nn.Module):
             cs.append(cs_feature.unsqueeze(dim=0))
 
         cs = torch.cat(cs, dim=0)
-        out = self.decoder(cs)
+        out = self.decoder(content_features,style_features,cs)
 
         out_features = self.vgg_encoder(out, output_last_feature=True)
         out_middle_features = self.vgg_encoder(out, output_last_feature=False)

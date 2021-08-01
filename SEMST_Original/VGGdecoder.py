@@ -13,7 +13,56 @@ class Interpolate(nn.Module):
         x = F.interpolate(x, scale_factor=self.scale_factor)
         return x
 
+class ResBlock(torch.nn.Module):
+    def __init__(self, module):
+        super().__init__()
+        self.module = module
 
+    def forward(self, inputs):
+        return self.module(inputs) + inputs
+
+decoder_1 = nn.Sequential(
+    ResBlock(nn.Sequential(
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(512, 512, (3, 3)),
+        nn.ReLU(),
+        nn.Conv2d(512, 512, (1 , 1)),
+    )),
+    nn.ReflectionPad2d((1, 1, 1, 1)),
+    nn.Conv2d(512, 256, (3, 3)),
+    nn.ReLU(),
+)
+decoder_2 = nn.Sequential(
+    ResBlock(nn.Sequential(
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(256, 256, (3, 3)),
+        nn.ReLU(),
+        nn.Conv2d(256, 256, (1 , 1)),
+    )),
+    nn.ReflectionPad2d((1, 1, 1, 1)),
+    nn.Conv2d(256, 128, (3, 3)),
+    nn.ReLU(),
+
+)
+decoder_3 = nn.Sequential(
+    nn.ReflectionPad2d((1, 1, 1, 1)),
+    nn.Conv2d(128, 128, (3, 3)),
+    nn.ReLU(),
+    nn.ReflectionPad2d((1, 1, 1, 1)),
+    nn.Conv2d(128, 64, (3, 3)),
+    nn.ReLU(),
+
+)
+decoder_4 = nn.Sequential(
+    nn.Upsample(scale_factor=2, mode='nearest'),
+    nn.ReflectionPad2d((1, 1, 1, 1)),
+    nn.Conv2d(64, 64, (3, 3)),
+    nn.ReLU(),
+    nn.ReflectionPad2d((1, 1, 1, 1)),
+    nn.Conv2d(64, 3, (3, 3)),
+)
+
+'''
 vgg_decoder_relu5_1 = nn.Sequential(
     nn.ReflectionPad2d((1, 1, 1, 1)),
     nn.Conv2d(512, 512, 3),
@@ -58,26 +107,29 @@ vgg_decoder_relu5_1 = nn.Sequential(
     nn.ReflectionPad2d((1, 1, 1, 1)),
     nn.Conv2d(64, 3, 3)
     )
-
+'''
 
 class Decoder(nn.Module):
     def __init__(self, level, pretrained_path=None):
         super().__init__()
-        if level == 1:
-            self.net = nn.Sequential(*copy.deepcopy(list(vgg_decoder_relu5_1.children())[-2:]))
-        elif level == 2:
-            self.net = nn.Sequential(*copy.deepcopy(list(vgg_decoder_relu5_1.children())[-9:]))
-        elif level == 3:
-            self.net = nn.Sequential(*copy.deepcopy(list(vgg_decoder_relu5_1.children())[-16:]))
-        elif level == 4:
-            self.net = nn.Sequential(*copy.deepcopy(list(vgg_decoder_relu5_1.children())[-29:]))
-        elif level == 5:
-            self.net = nn.Sequential(*copy.deepcopy(list(vgg_decoder_relu5_1.children())))
-        else:
-            raise ValueError('level should be between 1~5')
+
+        self.decoder_1 = decoder_1
+        self.decoder_2 = decoder_2
+        self.decoder_3 = decoder_3
+        self.decoder_4 = decoder_4
 
         if pretrained_path is not None:
             self.net.load_state_dict(torch.load(pretrained_path, map_location=lambda storage, loc: storage))
 
-    def forward(self, x):
-        return self.net(x)
+    def forward(self, cs):
+        m = nn.Upsample(scale_factor=2, mode='nearest')
+        t = self.decoder_1(cs[-1])
+        t = m(t)
+        # t_2 = UPSCALE CONTENT FEAT!
+        t += cs[-2]
+        t = self.decoder_2(t)
+        t = m(t)
+        t += cs[-3]
+        t = self.decoder_3(t)
+        t = self.decoder_4(t)
+        return t
