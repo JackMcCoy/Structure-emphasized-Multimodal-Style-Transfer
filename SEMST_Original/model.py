@@ -259,7 +259,7 @@ class Model(nn.Module):
             print(style_label)
             print(content_label.size())
             print(style_label.size())
-            print(match.items()[0])
+            print(list(match.items())[0])
             cs_feature = torch.zeros_like(cf)
             for i, j in match.items():
                 cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
