@@ -219,10 +219,10 @@ class Model(nn.Module):
         content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
         style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_features=False)
 
-        for idx, cp, sp in enumerate(zip(content_image_path, style_image_path)):
+        for idx, images in enumerate(zip(content_image_path, style_image_path)):
             #calculate kmeans clusters in style image and content image
-            content_label = calc_k(cp, self.kmeans_device)
-            style_label = calc_k(sp, self.kmeans_device)
+            content_label = calc_k(images[0], self.kmeans_device)
+            style_label = calc_k(images[1], self.kmeans_device)
 
             content_k = int(content_label.max().item() + 1)
             style_k = int(style_label.max().item() + 1)
@@ -263,9 +263,9 @@ class Model(nn.Module):
         content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
         style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_feature=False)
 
-        for idx, cp, sp, in enumerate(zip(content_image_path, style_image_path)):
-            content_label = calc_k(cp, self.kmeans_device)
-            style_label = calc_k(sp, self.kmeans_device)
+        for idx, images in enumerate(zip(content_image_path, style_image_path)):
+            content_label = calc_k(images[0], self.kmeans_device)
+            style_label = calc_k(images[1], self.kmeans_device)
             content_k = int(content_label.max().item() + 1)
             style_k = int(style_label.max().item() + 1)
 
