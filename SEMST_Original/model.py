@@ -232,24 +232,19 @@ class Model(nn.Module):
             content_label = content_label.to(self.device)
             style_label = style_label.to(self.device)
 
-            intermediate_layers=[]
-            for index, cf in enumerate(content_features[idx][1:]):
-                cs_feature = torch.zeros_like(cf)
-                for i, j in match.items():
-                    cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
-                    sl = torch.zeros_like(sf)
-                    for jj in j:
-                        sl += (style_label == jj).unsqueeze(dim=0).expand_as(style_features[idx][index]).to(torch.float)
-                    sl = sl.to(torch.bool)
-                    sub_sf = style_features[idx][index][sl].reshape(style_features[idx][index].shape[0], -1)
-                    cs_feature += labeled_whiten_and_color(cf, sub_sf, alpha, cl)
+            cs_feature = torch.zeros_like(content_features[idx][-1])
+            for i, j in match.items():
+                cl = (content_label == i).unsqueeze(dim=0).expand_as(content_features[idx][-1]).to(torch.float)
+                sl = torch.zeros_like(style_features[idx][-1])
+                for jj in j:
+                    sl += (style_label == jj).unsqueeze(dim=0).expand_as(style_features[idx][-1]).to(torch.float)
+                sl = sl.to(torch.bool)
+                sub_sf = style_features[idx][-1][sl].reshape(style_features[idx][-1].shape[0], -1)
+                cs_feature += labeled_whiten_and_color(content_features[idx][-1], sub_sf, alpha, cl)
+            cs.append(cs_feature)
 
-                intermediate_layers.append(cs_feature.unsqueeze(dim=0))
-            cs.append(intermediate_layers)
-        concatenated=[]
-        for i in range(len(cs[0])):
-            concatenated.append(torch.cat([j[i] for j in cs], dim=0))
-        out = self.decoder(concatenated)
+        cs = torch.cat(cs, dim=0)
+        out = self.decoder(cs,content_features,style_features)
         return out
 
     def forward(self,
