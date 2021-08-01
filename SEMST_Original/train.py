@@ -30,13 +30,13 @@ def main():
                         help='fusion degree, should be a float or a list which length is n_cluster')
     parser.add_argument('--gamma', type=float, default=1,
                         help='weight of style loss')
-    parser.add_argument('--train_content_dir', type=str, default='/data/chen/content',
+    parser.add_argument('--train_content_dir', type=str, default='../content',
                         help='content images directory for train')
-    parser.add_argument('--train_style_dir', type=str, default='/data/chen/style',
+    parser.add_argument('--train_style_dir', type=str, default='../style',
                         help='style images directory for train')
-    parser.add_argument('--test_content_dir', type=str, default='/data/chen/content',
+    parser.add_argument('--test_content_dir', type=str, default='../content',
                         help='content images directory for test')
-    parser.add_argument('--test_style_dir', type=str, default='/data/chen/style',
+    parser.add_argument('--test_style_dir', type=str, default='../style',
                         help='style images directory for test')
     parser.add_argument('--save_dir', type=str, default='result',
                         help='save directory for result and loss')
