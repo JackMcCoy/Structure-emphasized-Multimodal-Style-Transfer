@@ -118,9 +118,6 @@ class Decoder(nn.Module):
         self.decoder_3 = decoder_3
         self.decoder_4 = decoder_4
 
-        if pretrained_path is not None:
-            self.net.load_state_dict(torch.load(pretrained_path, map_location=lambda storage, loc: storage))
-
     def forward(self, cs):
         m = nn.Upsample(scale_factor=2, mode='nearest')
         t = self.decoder_1(cs[-1])
