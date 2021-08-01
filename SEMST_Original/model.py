@@ -274,8 +274,11 @@ class Model(nn.Module):
         style_middle_features = self.vgg_encoder(style_image_tensor.to(self.device), output_last_feature=False)
         content_middle_features = self.vgg_encoder(content_image_tensor.to(self.device), output_last_feature=False)
 
-        loss_c = self.calc_content_loss(out_middle_features, content_middle_features)
-        loss_s = self.calc_style_loss(out_middle_features, style_middle_features)
+        loss_c = 0
+        loss_s = 0
+        for i in range(len(out_middle_features)):
+            loss_c += self.calc_content_loss(out_middle_features[i], content_middle_features[i])
+            loss_s += self.calc_style_loss(out_middle_features[i], style_middle_features[i])
         loss = loss_c + gamma * loss_s
         # print('loss: ', loss_c.item(), gamma*loss_s.item())
 
