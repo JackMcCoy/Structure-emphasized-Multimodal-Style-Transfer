@@ -87,17 +87,6 @@ def content_relt_loss(pred, target):
         dM * (Mx - My)).mean() * pred.size()[2] * pred.size()[3]
     return loss_content
 
-def adain(content_feat, style_feat):
-    assert (content_feat.size()[:2] == style_feat.size()[:2])
-    size = content_feat.size()
-    style_mean, style_std = calc_mean_std_adain(style_feat)
-    content_mean, content_std = calc_mean_std_adain(content_feat)
-
-    normalized_feat = (content_feat - content_mean.expand(
-        size)) / content_std.expand(size)
-    t = normalized_feat * style_std.expand(size) + style_mean.expand(size)
-    return t
-
 class VGGEncoder(nn.Module):
     def __init__(self, pretrained_path=None):
         super().__init__()
@@ -266,7 +255,11 @@ class Model(nn.Module):
             match = matching[(content_k, style_k)]
             content_label = content_label.to(self.device)
             style_label = style_label.to(self.device)
-
+            print(content_label)
+            print(style_label)
+            print(content_label.size())
+            print(style_label.size())
+            print(match.items()[0])
             cs_feature = torch.zeros_like(cf)
             for i, j in match.items():
                 cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
