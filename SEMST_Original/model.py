@@ -270,11 +270,11 @@ class Model(nn.Module):
         cs = torch.cat(cs, dim=0)
         out = self.decoder(cs, content_features, style_features)
 
-        out_features = self.vgg_encoder(out, output_last_feature=True)
         out_middle_features = self.vgg_encoder(out, output_last_feature=False)
         style_middle_features = self.vgg_encoder(style_image_tensor.to(self.device), output_last_feature=False)
+        content_middle_features = self.vgg_encoder(content_image_tensor.to(self.device), output_last_feature=False)
 
-        loss_c = self.calc_content_loss(out_features, content_features)
+        loss_c = self.calc_content_loss(out_middle_features, content_middle_features)
         loss_s = self.calc_style_loss(out_middle_features, style_middle_features)
         loss = loss_c + gamma * loss_s
         # print('loss: ', loss_c.item(), gamma*loss_s.item())
