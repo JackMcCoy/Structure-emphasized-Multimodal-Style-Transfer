@@ -208,7 +208,7 @@ class Model(nn.Module):
         content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
         style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_features=False)
 
-        for cp, sp, cf, sf in zip(content_image_path, style_image_path, [i[0] for i in content_features], [i[0] for i in style_features]):
+        for cp, sp, cf, sf in zip(content_image_path, style_image_path, content_features[-1], style_features[-1]):
             content_label = calc_k(cp, self.kmeans_device)
             style_label = calc_k(sp, self.kmeans_device)
 
@@ -246,7 +246,7 @@ class Model(nn.Module):
         content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
         style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_feature=False)
 
-        for cp, sp, cf, sf in zip(content_image_path, style_image_path, [i[-1] for i in content_features], [i[-1] for i in style_features]):
+        for cp, sp, cf, sf in zip(content_image_path, style_image_path, content_features[-1], style_features[-1]):
             content_label = calc_k(cp, self.kmeans_device)
             style_label = calc_k(sp, self.kmeans_device)
             content_k = int(content_label.max().item() + 1)
