@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import copy
 import argparse
+from PIL import Image, ImageFile
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
