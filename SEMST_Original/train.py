@@ -75,6 +75,8 @@ def main():
                         help='number of images in each mini-batch')
     parser.add_argument('--epoch', '-e', type=int, default=1,
                         help='number of sweeps over the dataset to train')
+    parser.add_argument('--iters', '-i', type=int, default=30000,
+                        help='number of iterations to train')
     parser.add_argument('--gpu', '-g', type=int, default=0,
                         help='GPU ID(negative value indicate CPU)')
     parser.add_argument('--learning_rate', '-lr', type=int, default=1e-5,
@@ -129,20 +131,30 @@ def main():
     content_tf = train_transform()
     style_tf = train_transform()
 
-    train_dataset = FlatFolderDataset(args.train_content_dir, content_tf)
-    test_dataset = FlatFolderDataset(args.test_content_dir, content_tf)
+    content_dataset = FlatFolderDataset(args.train_content_dir, content_tf)
+    test_content_dataset = FlatFolderDataset(args.test_content_dir, content_tf)
+    style_dataset = FlatFolderDataset(args.train_style_dir, style_tf)
+    test_style_dataset = FlatFolderDataset(args.test_style_dir, style_tf)
 
-    data_length = len(train_dataset)
+    data_length = len(content_dataset)
     print(f'Length of train image pairs: {data_length}')
 
-    train_loader = iter(data.DataLoader(
-        train_dataset, batch_size=args.batch_size,
-        sampler=InfiniteSamplerWrapper(train_dataset),
-        num_workers=8))
-    test_iter = iter(data.DataLoader(
-        test_dataset, batch_size=args.batch_size,
-        sampler=InfiniteSamplerWrapper(test_dataset),
-        num_workers=8))
+    content_loader = iter(data.DataLoader(
+        content_dataset, batch_size=args.batch_size,
+        sampler=InfiniteSamplerWrapper(content_dataset),
+        num_workers=4))
+    test_content_iter = iter(data.DataLoader(
+        test_content_dataset, batch_size=args.batch_size,
+        sampler=InfiniteSamplerWrapper(test_content_dataset),
+        num_workers=4))
+    style_loader = iter(data.DataLoader(
+        style_dataset, batch_size=args.batch_size,
+        sampler=InfiniteSamplerWrapper(style_dataset),
+        num_workers=4))
+    test_style_iter = iter(data.DataLoader(
+        test_style_dataset, batch_size=args.batch_size,
+        sampler=InfiniteSamplerWrapper(test_style_dataset),
+        num_workers=4))
 
     # set model and optimizer
     model = Model(alpha=args.alpha,
@@ -160,39 +172,43 @@ def main():
 
     # start training
     loss_list = []
-    for e in range(1, args.epoch + 1):
+    for e in tqdm.tqdm(list(range(1, args.iters + 1))):
         print(f'Start {e} epoch')
         i = 1
-        for content_path, style_path, content_tensor, style_tensor in tqdm(train_loader):
-            loss = model(content_path, style_path, content_tensor, style_tensor, args.gamma)
-            if torch.isnan(loss):
-                model = prev_model
-                optimizer = torch.optim.Adam(model.parameters())
-                optimizer.load_state_dict(prev_optimizer.state_dict())
-            else:
-                prev_model = copy.deepcopy(model)
-                prev_optimizer = copy.deepcopy(optimizer)
+        content_path, content_tensor = next(content_loader)
+        style_path, style_tensor = next(style_loader)
 
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+        loss = model(content_path, style_path, content_tensor, style_tensor, args.gamma)
+        if torch.isnan(loss):
+            model = prev_model
+            optimizer = torch.optim.Adam(model.parameters())
+            optimizer.load_state_dict(prev_optimizer.state_dict())
+        else:
+            prev_model = copy.deepcopy(model)
+            prev_optimizer = copy.deepcopy(optimizer)
 
-                loss_list.append(loss.item())
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-                # print(f'[{e}/total {args.epoch} epoch],[{i} /'
-                #       f'total {round(data_length/args.batch_size)} iteration]: {loss.item()}')
+            loss_list.append(loss.item())
 
-                if i % args.snapshot_interval == 0:
-                    content_path, style_path, content_tensor, style_tensor = next(test_iter)
-                    content = content_tensor.to(device)
-                    style = style_tensor.to(device)
-                    with torch.no_grad():
-                        out = model.generate(content_path, style_path, content_tensor, style_tensor)
-                    res = torch.cat([content, style, out], dim=0)
-                    res = res.to('cpu')
-                    save_image(res, f'{image_dir}/{e}_epoch_{i}_iteration.png', nrow=args.batch_size)
-                    torch.save(model.state_dict(), f'{model_state_dir}/{e}_epoch_{i}_iteration.pth')
-                i += 1
+            # print(f'[{e}/total {args.epoch} epoch],[{i} /'
+            #       f'total {round(data_length/args.batch_size)} iteration]: {loss.item()}')
+
+            if i % args.snapshot_interval == 0:
+
+                content_path, content_tensor = next(test_content_iter)[0]
+                style_path, style_tensor = next(test_style_iter)[0]
+                content = content_tensor.to(device)
+                style = style_tensor.to(device)
+                with torch.no_grad():
+                    out = model.generate(content_path, style_path, content_tensor, style_tensor)
+                res = torch.cat([content, style, out], dim=0)
+                res = res.to('cpu')
+                save_image(res, f'{image_dir}/{e}_epoch_{i}_iteration.png', nrow=args.batch_size)
+                torch.save(model.state_dict(), f'{model_state_dir}/{e}_epoch_{i}_iteration.pth')
+            i += 1
         torch.save(model.state_dict(), f'{model_state_dir}/{e}_epoch.pth')
     plt.plot(range(len(loss_list)), loss_list)
     plt.xlabel('iteration')
