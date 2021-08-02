@@ -144,8 +144,8 @@ class Decoder(nn.Module):
         self.decoder_4 = decoder_4
 
     def forward(self, cs,content_feat,style_feats):
-        m = nn.Upsample(scale_factor=2, mode='nearest')
-        t = self.decoder_1(cs)
+        t = adain(content_feat[-1], style_feats[-1])
+        t = self.decoder_1(t)
         t = m(t)
         # t_2 = UPSCALE CONTENT FEAT!
         t += adain(content_feat[-2], style_feats[-2])
@@ -153,5 +153,6 @@ class Decoder(nn.Module):
         t = m(t)
         t += adain(content_feat[-3], style_feats[-3])
         t = self.decoder_3(t)
+        t += cs
         t = self.decoder_4(t)
         return t
