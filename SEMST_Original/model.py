@@ -245,8 +245,6 @@ class Model(nn.Module):
         cs = []
         content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
         style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_feature=False)
-        for i in style_features:
-            print(i.size())
 
         for cp, sp, cf, sf in zip(content_image_path, style_image_path, content_features[0], style_features[0]):
             content_label = calc_k(cp, self.kmeans_device)
@@ -258,9 +256,6 @@ class Model(nn.Module):
             content_label = content_label.to(self.device)
             style_label = style_label.to(self.device)
             cs_feature = torch.zeros_like(cf)
-            print(content_label.size())
-            print(style_label.size())
-            print(list(match.items())[0])
             for i, j in match.items():
                 cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
                 sl = torch.zeros_like(sf)
