@@ -172,7 +172,7 @@ def main():
 
     # start training
     loss_list = []
-    for e in tqdm.tqdm(list(range(1, args.iters + 1))):
+    for e in tqdm(list(range(1, args.iters + 1))):
         print(f'Start {e} epoch')
         i = 1
         content_path, content_tensor = next(content_loader)
