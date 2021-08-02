@@ -61,7 +61,7 @@ class FlatFolderDataset(data.Dataset):
         path = self.paths[index]
         img = Image.open(str(path)).convert('RGB')
         img = self.transform(img)
-        return (path, img)
+        return (img, (path,))
 
     def __len__(self):
         return len(self.paths)
@@ -175,8 +175,10 @@ def main():
     for e in tqdm(list(range(1, args.iters + 1))):
         print(f'Start {e} epoch')
         i = 1
-        content_path, content_tensor = next(content_loader)
-        style_path, style_tensor = next(style_loader)
+        content_tensor, content_path = next(content_loader)
+        style_tensor, style_path = next(style_loader)
+        style_path=style_path[0]
+        content_path=content_path[0]
 
         loss = model(content_path, style_path, content_tensor, style_tensor, args.gamma)
         if torch.isnan(loss):
