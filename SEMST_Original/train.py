@@ -14,7 +14,7 @@ import torch
 from torch.optim import Adam
 import torch.utils.data as data
 from torchvision.utils import save_image
-from torchvision import transforms, datasets
+from torchvision import transforms
 from dataset import PreprocessDataset, get_loader
 from model import Model
 
@@ -50,15 +50,24 @@ def train_transform():
     ]
     return transforms.Compose(transform_list)
 
-class FlatFolderDataset(datasets.ImageFolder):
+class FlatFolderDataset(data.Dataset):
+    def __init__(self, root, transform):
+        super(FlatFolderDataset, self).__init__()
+        self.root = root
+        self.paths = list(Path(self.root).glob('*'))
+        self.transform = transform
 
     def __getitem__(self, index):
-        original_tuple = super(FlatFolderDataset, self).__getitem__(index)
-        path = self.imgs[index][0]
-        # make a new tuple that includes original and the path
-        tuple_with_path = (path, original_tuple[0])
+        path = self.paths[index]
+        img = Image.open(str(path)).convert('RGB')
+        img = self.transform(img)
+        return (path, img)
 
-        return tuple_with_path
+    def __len__(self):
+        return len(self.paths)
+
+    def name(self):
+        return 'FlatFolderDataset'
 
 def main():
     parser = argparse.ArgumentParser(description='Structure-emphasized Multimodal Style Transfer by CHEN CHEN')
