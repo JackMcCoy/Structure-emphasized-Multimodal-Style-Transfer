@@ -200,8 +200,10 @@ def main():
 
             if i % args.snapshot_interval == 0:
 
-                content_path, content_tensor = next(test_content_iter)[0]
-                style_path, style_tensor = next(test_style_iter)[0]
+                content_tensor, content_path = next(test_content_iter)
+                style_tensor, style_path = next(test_style_iter)
+                style_path=[test_style_dataset.paths[i] for i in style_path]
+                content_path=[test_content_dataset.paths[i] for i in content_path]
                 content = content_tensor.to(device)
                 style = style_tensor.to(device)
                 with torch.no_grad():
