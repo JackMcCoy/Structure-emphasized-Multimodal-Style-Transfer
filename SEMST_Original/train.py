@@ -141,7 +141,7 @@ def main():
     content_loader = iter(data.DataLoader(
         content_dataset, batch_size=args.batch_size,
         sampler=InfiniteSamplerWrapper(content_dataset),
-        num_workers=4))
+        num_workers=16))
     test_content_iter = iter(data.DataLoader(
         test_content_dataset, batch_size=args.batch_size,
         sampler=InfiniteSamplerWrapper(test_content_dataset),
@@ -149,7 +149,7 @@ def main():
     style_loader = iter(data.DataLoader(
         style_dataset, batch_size=args.batch_size,
         sampler=InfiniteSamplerWrapper(style_dataset),
-        num_workers=4))
+        num_workers=16))
     test_style_iter = iter(data.DataLoader(
         test_style_dataset, batch_size=args.batch_size,
         sampler=InfiniteSamplerWrapper(test_style_dataset),
