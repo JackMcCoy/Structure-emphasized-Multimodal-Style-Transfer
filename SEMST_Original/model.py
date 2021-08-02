@@ -256,6 +256,9 @@ class Model(nn.Module):
             content_label = content_label.to(self.device)
             style_label = style_label.to(self.device)
             cs_feature = torch.zeros_like(cf)
+            print(content_label.size())
+            print(style_label.size())
+            print(list(cs_feature.items())[0])
             for i, j in match.items():
                 cl = (content_label == i).unsqueeze(dim=0).expand_as(cf).to(torch.float)
                 sl = torch.zeros_like(sf)
