@@ -79,7 +79,6 @@ decoder_3 = nn.Sequential(
 
 )
 decoder_4 = nn.Sequential(
-    nn.Upsample(scale_factor=2, mode='nearest'),
     nn.ReflectionPad2d((1, 1, 1, 1)),
     nn.Conv2d(64, 64, (3, 3)),
     nn.ReLU(),
@@ -154,6 +153,7 @@ class Decoder(nn.Module):
         t = m(t)
         t += adain(content_feat[-3], style_feats[-3])
         t = self.decoder_3(t)
+        t = m(t)
         t += cs
         t = self.decoder_4(t)
         return t
