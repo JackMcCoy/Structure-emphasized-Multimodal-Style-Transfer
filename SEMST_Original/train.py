@@ -163,6 +163,8 @@ def main():
     if args.reuse is not None:
         model.load_state_dict(torch.load(args.reuse, map_location=lambda storage, loc: storage))
         print(f'{args.reuse} loaded')
+    else:
+        model.decoder.init_weights()
 
     optimizer = Adam(model.parameters(), lr=args.learning_rate)
 

@@ -86,6 +86,11 @@ decoder_4 = nn.Sequential(
     nn.Conv2d(64, 3, (3, 3)),
 )
 
+def init_weights(m):
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform(m.weight)
+        m.bias.data.fill_(0.01)
+
 '''
 vgg_decoder_relu5_1 = nn.Sequential(
     nn.ReflectionPad2d((1, 1, 1, 1)),
@@ -141,6 +146,12 @@ class Decoder(nn.Module):
         self.decoder_2 = decoder_2
         self.decoder_3 = decoder_3
         self.decoder_4 = decoder_4
+
+    def init_weights(self):
+        self.decoder_1.apply(init_weights)
+        self.decoder_2.apply(init_weights)
+        self.decoder_3.apply(init_weights)
+        self.decoder_4.apply(init_weights)
 
     def forward(self, cs,content_feat,style_feats):
         m = nn.Upsample(scale_factor=2, mode='nearest')

@@ -109,7 +109,6 @@ class VGGEncoder(nn.Module):
         else:
             return [h1, h2, h3, h4]
 
-
 class Model(nn.Module):
     def __init__(self,
                  alpha=1,
