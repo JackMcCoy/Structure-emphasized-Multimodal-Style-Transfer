@@ -44,8 +44,7 @@ class InfiniteSamplerWrapper(data.sampler.Sampler):
 
 def train_transform():
     transform_list = [
-        transforms.Resize(size=(525)),
-        transforms.RandomCrop(512),
+        transforms.Resize(size=(128,128)),
         transforms.ToTensor()
     ]
     return transforms.Compose(transform_list)

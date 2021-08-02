@@ -165,6 +165,7 @@ def calc_k(image_path,
     img = Image.open(image_path).convert('RGB')
     w, h = img.size
     #     gb = 0.5 if max(w, h) < 1440 else 0
+    img = img.resize((128,128))
     w, h = cal_maxpool_size(w, h, 3)
 
     img = img.resize((w, h))
