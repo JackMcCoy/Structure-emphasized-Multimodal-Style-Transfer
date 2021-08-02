@@ -212,7 +212,6 @@ def main():
                 save_image(res, f'{image_dir}/{e}_epoch_{i}_iteration.png', nrow=args.batch_size)
                 torch.save(model.state_dict(), f'{model_state_dir}/{e}_epoch_{i}_iteration.pth')
             i += 1
-        torch.save(model.state_dict(), f'{model_state_dir}/{e}_epoch.pth')
     plt.plot(range(len(loss_list)), loss_list)
     plt.xlabel('iteration')
     plt.ylabel('loss')
