@@ -245,6 +245,8 @@ class Model(nn.Module):
         cs = []
         content_features = self.vgg_encoder(content_image_tensor.to(self.device),output_last_feature=False)
         style_features = self.vgg_encoder(style_image_tensor.to(self.device),output_last_feature=False)
+        for i in style_features:
+            print(i.size())
 
         for cp, sp, cf, sf in zip(content_image_path, style_image_path, content_features[-1], style_features[-1]):
             content_label = calc_k(cp, self.kmeans_device)
