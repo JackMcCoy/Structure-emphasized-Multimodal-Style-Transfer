@@ -61,7 +61,7 @@ class FlatFolderDataset(data.Dataset):
         path = self.paths[index]
         img = Image.open(str(path)).convert('RGB')
         img = self.transform(img)
-        return (img, (path,))
+        return img, [path]
 
     def __len__(self):
         return len(self.paths)
