@@ -154,6 +154,6 @@ class Decoder(nn.Module):
         t += adain(content_feat[-3], style_feats[-3])
         t = self.decoder_3(t)
         t = m(t)
-        t += cs
+        t = (t+cs)/2
         t = self.decoder_4(t)
         return t
