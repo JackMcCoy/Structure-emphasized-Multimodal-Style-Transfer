@@ -166,9 +166,6 @@ def calc_k(image_path,
     w, h = img.size
     #     gb = 0.5 if max(w, h) < 1440 else 0
     img = img.resize((128,128))
-    w, h = cal_maxpool_size(w, h, 3)
-
-    img = img.resize((w, h))
     #     img = img.filter(ImageFilter.GaussianBlur(gb))
 
     if show_img_and_cluster:
@@ -223,7 +220,7 @@ def calc_k(image_path,
         for i in range(k):
             new_labels[labels == i] = new_clusters[i]
 
-        label = new_labels.reshape(h, w)
+        label = new_labels.reshape(128,128)
 
         if show_img_and_cluster:
             plt.imshow(label.clone().to('cpu'))
