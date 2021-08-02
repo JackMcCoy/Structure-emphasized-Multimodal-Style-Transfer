@@ -177,8 +177,8 @@ def main():
         i = 1
         content_tensor, content_path = next(content_loader)
         style_tensor, style_path = next(style_loader)
-        style_path=style_dataset.paths[style_path]
-        content_path=content_dataset.paths[content_path]
+        style_path=[style_dataset.paths[i] for i in style_path]
+        content_path=[content_dataset.paths[i] for i in content_path]
 
         loss = model(content_path, style_path, content_tensor, style_tensor, args.gamma)
         if torch.isnan(loss):
