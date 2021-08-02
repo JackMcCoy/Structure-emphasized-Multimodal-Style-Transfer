@@ -61,7 +61,7 @@ class FlatFolderDataset(data.Dataset):
         path = self.paths[index]
         img = Image.open(str(path)).convert('RGB')
         img = self.transform(img)
-        return img, [path]
+        return img, index
 
     def __len__(self):
         return len(self.paths)
@@ -177,8 +177,8 @@ def main():
         i = 1
         content_tensor, content_path = next(content_loader)
         style_tensor, style_path = next(style_loader)
-        style_path=style_path[0]
-        content_path=content_path[0]
+        style_path=style_dataset.paths[style_path]
+        content_path=content_dataset.paths[content_path]
 
         loss = model(content_path, style_path, content_tensor, style_tensor, args.gamma)
         if torch.isnan(loss):
