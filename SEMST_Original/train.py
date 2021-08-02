@@ -180,6 +180,7 @@ def main():
 
         loss = model(content_path, style_path, content_tensor, style_tensor, args.gamma)
         if torch.isnan(loss):
+            print('nan')
             model = prev_model
             optimizer = torch.optim.Adam(model.parameters())
             optimizer.load_state_dict(prev_optimizer.state_dict())
@@ -196,7 +197,7 @@ def main():
             # print(f'[{e}/total {args.epoch} epoch],[{i} /'
             #       f'total {round(data_length/args.batch_size)} iteration]: {loss.item()}')
 
-            if i % args.snapshot_interval == 0:
+            if e % args.snapshot_interval == 0:
 
                 content_tensor, content_path = next(test_content_iter)
                 style_tensor, style_path = next(test_style_iter)
