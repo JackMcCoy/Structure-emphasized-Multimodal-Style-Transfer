@@ -163,7 +163,7 @@ def calc_k(image_path,
            threshold_max=0.7,
            show_img_and_cluster=False):
     img = Image.open(image_path).convert('RGB')
-    w, h = img.size
+    w, h = 128,128
     #     gb = 0.5 if max(w, h) < 1440 else 0
     img = img.resize((128,128))
     #     img = img.filter(ImageFilter.GaussianBlur(gb))
