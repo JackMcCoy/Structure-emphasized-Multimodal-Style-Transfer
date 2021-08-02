@@ -9,10 +9,62 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import torch
 from torch.optim import Adam
+import torch.utils.data as data
 from torchvision.utils import save_image
+from torchvision import transforms
 from dataset import PreprocessDataset, get_loader
 from model import Model
 
+
+def InfiniteSampler(n):
+    # i = 0
+    i = n - 1
+    order = np.random.permutation(n)
+    while True:
+        yield order[i]
+        i += 1
+        if i >= n:
+            np.random.seed()
+            order = np.random.permutation(n)
+            i = 0
+
+
+class InfiniteSamplerWrapper(data.sampler.Sampler):
+    def __init__(self, data_source):
+        self.num_samples = len(data_source)
+
+    def __iter__(self):
+        return iter(InfiniteSampler(self.num_samples))
+
+    def __len__(self):
+        return 2 ** 31
+
+def train_transform():
+    transform_list = [
+        transforms.Resize(size=(136)),
+        transforms.RandomCrop(128),
+        transforms.ToTensor()
+    ]
+    return transforms.Compose(transform_list)
+
+class FlatFolderDataset(data.Dataset):
+    def __init__(self, root, transform):
+        super(FlatFolderDataset, self).__init__()
+        self.root = root
+        self.paths = list(Path(self.root).glob('*'))
+        self.transform = transform
+
+    def __getitem__(self, index):
+        path = self.paths[index]
+        img = Image.open(str(path)).convert('RGB')
+        img = self.transform(img)
+        return img
+
+    def __len__(self):
+        return len(self.paths)
+
+    def name(self):
+        return 'FlatFolderDataset'
 
 def main():
     parser = argparse.ArgumentParser(description='Structure-emphasized Multimodal Style Transfer by CHEN CHEN')
@@ -71,14 +123,23 @@ def main():
     print('')
 
     # prepare dataset and dataLoader
-    train_dataset = PreprocessDataset(args.train_content_dir, args.train_style_dir)
-    test_dataset = PreprocessDataset(args.test_content_dir, args.test_style_dir)
+    content_tf = train_transform()
+    style_tf = train_transform()
+
+    train_dataset = FlatFolderDataset(args.train_content_dir, content_tf)
+    test_dataset = FlatFolderDataset(args.test_content_dir, content_tf)
+
     data_length = len(train_dataset)
     print(f'Length of train image pairs: {data_length}')
 
-    train_loader = get_loader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_loader = get_loader(test_dataset, batch_size=args.batch_size, shuffle=True)
-    test_iter = iter(test_loader)
+    train_loader = iter(data.DataLoader(
+        train_dataset, batch_size=args.batch_size,
+        sampler=InfiniteSamplerWrapper(train_dataset),
+        num_workers=8))
+    test_iter = iter(data.DataLoader(
+        test_dataset, batch_size=args.batch_size,
+        sampler=InfiniteSamplerWrapper(test_dataset),
+        num_workers=8))
 
     # set model and optimizer
     model = Model(alpha=args.alpha,
