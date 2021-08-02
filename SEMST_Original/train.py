@@ -2,6 +2,7 @@ import warnings
 warnings.simplefilter("ignore", UserWarning)
 import os
 from pathlib import Path
+import numpy as np
 import copy
 import argparse
 import matplotlib as mpl
